@@ -14,6 +14,8 @@ __pycache__/
 .worktrees/
 .runtime/
 .scheduled_tasks.json
+.transcripts/
+.task_outputs/
 # 测试产物
 .pytest_cache/
 .tox/
