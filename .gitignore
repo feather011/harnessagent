@@ -10,6 +10,7 @@ __pycache__/
 .memory/
 .tasks/
 .teams/
+.team/
 .mailboxes/
 .worktrees/
 .runtime/
