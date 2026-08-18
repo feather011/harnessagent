@@ -54,12 +54,12 @@ def _strip_surrogates(value):
     return value
 
 
-load_dotenv()
+load_dotenv(override=True)
 client = OpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL"),
+    api_key=os.getenv("MIMO_API_KEY"),
+    base_url=os.getenv("MIMO_BASE_URL"),
 )
-MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+MODEL = os.getenv("MIMO_MODEL", "mimo-v2.5")
 
 WORKDIR = Path(__file__).resolve().parent
 SKILLS_DIR = WORKDIR / "skills"

@@ -25,10 +25,10 @@ if hasattr(sys.stdout, "reconfigure"):
 
 load_dotenv()
 client = OpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL"),
+    api_key=os.getenv("MIMO_API_KEY"),
+    base_url=os.getenv("MIMO_BASE_URL"),
 )
-MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+MODEL = os.getenv("MIMO_MODEL", "mimo-v2.5")
 
 SYSTEM = "你是一个 coding agent，工作在 Windows 下的 Git Bash 环境。直接干活，不要解释。"
 
