@@ -1,7 +1,8 @@
-"""harness.tui.events — TUIEvent 事件类型 + EventBus。"""
+"""harness.tui.events — TUIEvent 事件类型 + EventBus + Textual Messages。"""
 
 import asyncio
 from dataclasses import dataclass, field
+from textual.message import Message
 
 
 @dataclass
@@ -46,9 +47,11 @@ class StatusEvent(TUIEvent):
     state: str = "idle"  # idle / running / waiting
 
 
-@dataclass
-class InputEvent(TUIEvent):
-    text: str = ""
+class InputEvent(Message):
+    """用户输入事件（Textual Message 子类，用于 post_message）。"""
+    def __init__(self, text: str = ""):
+        super().__init__()
+        self.text = text
 
 
 class EventBus:

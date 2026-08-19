@@ -46,6 +46,10 @@ class HarnessApp(App):
         self._chat_view = None
         self._status_bar = None
 
+    def on_input_event(self, event: InputEvent):
+        """接收 InputBox 的 Textual Message，转发到 EventBus。"""
+        self.event_bus.put_nowait(InputEvent(text=event.text))
+
     async def on_mount(self):
         """安装 screens，启动 splash → 0.8s 后切 main。"""
         self.install_screen(SplashScreen(), name="splash")
