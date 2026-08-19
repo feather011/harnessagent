@@ -1,0 +1,1 @@
+"""harness.goal — Goal Loop。"""
