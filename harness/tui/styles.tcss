@@ -1,0 +1,34 @@
+Screen { background: $surface; }
+
+#status {
+    dock: top;
+    height: 1;
+    background: $primary 10%;
+    color: $text;
+    padding: 0 1;
+    text-style: bold;
+}
+
+#chat {
+    height: 1fr;
+    background: $surface;
+    padding: 1 2;
+}
+
+#input {
+    dock: bottom;
+    height: 5;
+    background: $boost;
+    border: solid $primary;
+}
+
+.logo {
+    color: cyan;
+    text-align: center;
+    text-style: bold;
+}
+
+#subtitle {
+    text-align: center;
+    color: $text-muted;
+}
