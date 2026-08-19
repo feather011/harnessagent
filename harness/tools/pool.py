@@ -60,8 +60,15 @@ BUILTIN_HANDLERS: dict = {
 
 
 def assemble_tool_pool() -> tuple[list[dict], dict]:
-    """返回所有已注册工具（Phase 1 基础 + Phase 2 动态注册）。"""
-    return list(BUILTIN_TOOLS), dict(BUILTIN_HANDLERS)
+    """返回所有工具：base + MCP 动态（Phase 4）。"""
+    tools = list(BUILTIN_TOOLS)
+    handlers = dict(BUILTIN_HANDLERS)
+    # Phase 4: 合并 MCP 工具
+    try:
+        from harness.tools.mcp import assemble_tool_pool_v2
+        return assemble_tool_pool_v2(tools, handlers)
+    except ImportError:
+        return tools, handlers
 
 
 def register_tool(schema: dict, handler: Callable) -> None:
@@ -127,5 +134,23 @@ LOAD_MEMORY_SCHEMA = {"type": "function", "function": {
     "description": "Read a specific memory record by name.",
     "parameters": {"type": "object", "properties": {
         "name": {"type": "string", "description": "Memory name to load"},
+    }, "required": ["name"]}
+}}
+
+MCP_CONNECT_SCHEMA = {"type": "function", "function": {
+    "name": "connect_mcp",
+    "description": "连接一个 MCP server 并发现其工具（docs / deploy）。",
+    "parameters": {"type": "object", "properties": {
+        "name": {"type": "string", "enum": ["docs", "deploy"]},
+    }, "required": ["name"]}
+}}
+
+WORKFLOW_TOOL_SCHEMA = {"type": "function", "function": {
+    "name": "workflow",
+    "description": "Run a registered workflow. Returns run_id; final result arrives as <task_notification>.",
+    "parameters": {"type": "object", "properties": {
+        "name": {"type": "string", "description": "Workflow name"},
+        "args": {"type": "object", "description": "Optional workflow-specific args"},
+        "resume_from_run_id": {"type": "string", "description": "Optional: resume existing run"},
     }, "required": ["name"]}
 }}

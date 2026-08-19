@@ -50,7 +50,19 @@ def check_permission(tool_name: str, args: dict, workdir, prompt_user: bool = Tr
         if ask_user(tool_name, args, rule_reason) == "deny":
             return f"Permission denied by user: {rule_reason}"
 
-    # Phase 1: 无 MCP，第 3 道预留
+    # Phase 4: MCP 工具权限
+    if tool_name.startswith("mcp__"):
+        try:
+            from harness.tools.mcp import mcp_tool_policies
+        except ImportError:
+            mcp_tool_policies = {}
+        policy = mcp_tool_policies.get(tool_name, "confirm")
+        if policy != "allow":
+            if not prompt_user:
+                return f"Permission required: external tool {tool_name} needs host confirmation."
+            if ask_user(tool_name, args, f"External tool {tool_name}") == "deny":
+                return f"Permission denied by user: external tool {tool_name}"
+
     return None
 
 
