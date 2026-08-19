@@ -32,6 +32,9 @@ def agent_loop(
     teammates=None,
     task_store=None,
     goal_controller=None,
+    on_token=None,
+    on_tool_start=None,
+    on_tool_done=None,
 ) -> None:
     """
     6 阶段 agent 循环（Phase 3 增强）：
@@ -106,13 +109,65 @@ def agent_loop(
             messages[:] = compactor.prepare(messages, active)
 
         try:
-            resp = llm.chat(messages, tools=tools)
+            if on_token:
+                # Streaming mode（TUI）
+                collected_content = []
+                collected_tool_calls = {}  # index → {id, name, arguments}
+                stream = llm.stream(messages, tools=tools)
+                for chunk in stream:
+                    if not chunk.choices:
+                        continue
+                    delta = chunk.choices[0].delta
+                    if not delta:
+                        continue
+                    if delta.content:
+                        collected_content.append(delta.content)
+                        on_token(delta.content)
+                    if delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            idx = tc.index
+                            if idx not in collected_tool_calls:
+                                collected_tool_calls[idx] = {"id": tc.id or "", "name": "", "arguments": ""}
+                            if tc.id:
+                                collected_tool_calls[idx]["id"] = tc.id
+                            if tc.function:
+                                if tc.function.name:
+                                    collected_tool_calls[idx]["name"] = tc.function.name
+                                if tc.function.arguments:
+                                    collected_tool_calls[idx]["arguments"] += tc.function.arguments
+                # 构造 resp-like 对象
+                content = "".join(collected_content)
+                tc_list = []
+                for idx in sorted(collected_tool_calls):
+                    tc = collected_tool_calls[idx]
+                    tc_obj = type("TC", (), {
+                        "id": tc["id"],
+                        "function": type("F", (), {
+                            "name": tc["name"],
+                            "arguments": tc["arguments"],
+                        })(),
+                    })()
+                    tc_list.append(tc_obj)
+
+                def _model_dump(msg_content, msg_tc_list, **kw):
+                    result = {"role": "assistant", "content": msg_content}
+                    if msg_tc_list:
+                        result["tool_calls"] = [{"id": t.id} for t in msg_tc_list]
+                    return result
+
+                msg_obj = type("Msg", (), {
+                    "content": content or None,
+                    "tool_calls": tc_list if tc_list else None,
+                    "model_dump": lambda self, **kw: _model_dump(content, tc_list, **kw),
+                })()
+                resp = type("Resp", (), {"choices": [type("C", (), {"message": msg_obj})()]})()
+            else:
+                # Non-streaming mode（REPL）
+                resp = llm.chat(messages, tools=tools)
             reactive_retries = 0
-            # cron acknowledge（LLM 成功）
             if scheduler and pending_cron_jobs:
                 scheduler.acknowledge(pending_cron_jobs)
         except Exception as error:
-            # cron restore（LLM 失败）
             if scheduler and pending_cron_jobs:
                 scheduler.restore(pending_cron_jobs)
             if llm.is_prompt_too_long(error) and reactive_retries < MAX_REACTIVE_RETRIES:
@@ -145,7 +200,8 @@ def agent_loop(
             if memory_store:
                 memory_store.extract_memories(messages)
             if msg.content:
-                print(LLMClient.strip_surrogates(f"\033[32m{msg.content}\033[0m"), flush=True)
+                if not on_token:
+                    print(LLMClient.strip_surrogates(f"\033[32m{msg.content}\033[0m"), flush=True)
             return
 
         # ── 阶段 6：tool dispatch ──
@@ -165,6 +221,11 @@ def agent_loop(
                 continue
 
             # Phase 3: bash run_in_background 拦截
+            if on_tool_start:
+                on_tool_start(name, args, call.id)
+            import time as _time
+            _t0 = _time.time()
+
             if (name == "bash" and args.get("run_in_background") is True
                     and background is not None):
                 command = args.get("command", "")
@@ -188,6 +249,8 @@ def agent_loop(
                 if name == "todo_write":
                     rounds_since_todo = 0
 
+            if on_tool_done:
+                on_tool_done(name, args, output, _time.time() - _t0, call.id)
             trigger_hooks("PostToolUse", name, args, output)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": output})
 

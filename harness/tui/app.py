@@ -104,16 +104,36 @@ class HarnessApp(App):
                 self._status_bar.set_state("running")
 
                 try:
+                    chat = self._chat_view
+                    def on_token(t):
+                        pass  # streaming tokens 不逐个显示，等 tool/result 一次性展示
+                    def on_tool_start(n, a, i):
+                        args_str = str(a)[:60]
+                        chat.write(f"  [dim]⚙ {n}({args_str})[/dim]")
+                    def on_tool_done(n, a, o, d, i):
+                        preview = o[:100].replace("\n", " ")
+                        if "Error" in o:
+                            chat.write(f"  [red]✗ {n} → {preview}[/red] [dim]({d:.1f}s)[/dim]")
+                        else:
+                            chat.write(f"  [green]✓ {n}[/green] [dim]({d:.1f}s)[/dim]")
+                            if preview and len(preview) > 5:
+                                chat.write(f"    [dim]{preview}[/dim]")
+
                     await asyncio.get_event_loop().run_in_executor(
                         None,
                         lambda: agent_loop(
                             self.history, self.config, llm,
                             compactor=compactor,
-                            on_token=lambda t: self.event_bus.put_nowait(TokenEvent(t)),
-                            on_tool_start=lambda n, a, i: self.event_bus.put_nowait(ToolStartEvent(n, a, i)),
-                            on_tool_done=lambda n, a, o, d, i: self.event_bus.put_nowait(ToolDoneEvent(n, a, o, d, i)),
+                            on_token=on_token,
+                            on_tool_start=on_tool_start,
+                            on_tool_done=on_tool_done,
                         )
                     )
+                    # agent_loop 结束后，提取最后一条 assistant 消息
+                    if self.history and self.history[-1].get("role") == "assistant":
+                        content = self.history[-1].get("content", "")
+                        if content:
+                            self._chat_view.write(f"[bold green]Agent:[/bold green] {content}")
                 except Exception as e:
                     self._chat_view.write(f"[red]Error: {type(e).__name__}: {e}[/red]")
 
