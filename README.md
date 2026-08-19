@@ -1,173 +1,172 @@
 # 🚀 harness
 
-**Production-grade coding agent package** — 35+ tools, 5 daemon threads, workflow orchestration, goal loop.
+**Production 级 coding agent 框架** — 35+ 工具，5 套 daemon 线程，Workflow 编排，Goal 目标循环。
 
-Built on [MiMo mimo-v2.5](https://github.com/XiaoMi/MiMo) (OpenAI-compatible API). 155 tests. Python 3.14.
+基于 [MiMo mimo-v2.5](https://github.com/XiaoMi/MiMo)（OpenAI 兼容 API）。155 个测试。Python 3.14。
 
-## ✨ Features
+## ✨ 功能一览
 
-| Category | Tools | Description |
-|----------|-------|-------------|
-| 🔧 Base | `bash` `read_file` `write_file` `edit_file` `glob` | Core file & shell operations |
-| 📋 Planning | `todo_write` | Task list with status tracking |
-| 🤖 Subagent | `task` | Spawn independent sub-agents |
-| 📚 Skill | `load_skill` | Load YAML-frontmatter skill docs |
-| 🧠 Memory | `load_memory` | 4-subsystem memory (storage/recall/extract/consolidate) |
-| 🗜️ Context | `compact` | 4-step context compaction pipeline |
-| 📊 Task System | `create_task` `list_tasks` `get_task` `claim_task` `complete_task` | Persistent task management with dependencies |
-| ⏰ Cron | `schedule_cron` `list_crons` `cancel_cron` | 5-field cron expressions with durable persistence |
-| 👥 Team | `spawn_teammate` `list_teammates` `send_message` `broadcast` `request_shutdown` `request_plan` `review_plan` `create_worktree` | Multi-agent collaboration with plan gates |
-| 🌲 Worktree | `remove_worktree` | Git worktree management |
-| 🔌 MCP | `connect_mcp` + 4 dynamic tools | Mock docs/deploy MCP servers |
-| 🔄 Workflow | `workflow` | 6-primitive orchestration engine |
-| 🎯 Goal | `/goal` CLI | Goal loop with automatic evaluation |
+| 分类 | 工具 | 说明 |
+|------|------|------|
+| 🔧 基础 | `bash` `read_file` `write_file` `edit_file` `glob` | 文件与 Shell 操作 |
+| 📋 规划 | `todo_write` | 任务清单管理，状态追踪 |
+| 🤖 子 Agent | `task` | 启动独立子 agent 执行子任务 |
+| 📚 技能 | `load_skill` | 加载 YAML frontmatter 技能文档 |
+| 🧠 记忆 | `load_memory` | 4 子系统记忆（存储/召回/提取/整合） |
+| 🗜️ 上下文 | `compact` | 4 步上下文压缩管线 |
+| 📊 任务系统 | `create_task` `list_tasks` `get_task` `claim_task` `complete_task` | 持久化任务管理，支持依赖 |
+| ⏰ 定时任务 | `schedule_cron` `list_crons` `cancel_cron` | 5 字段 cron 表达式，持久化 |
+| 👥 团队 | `spawn_teammate` `list_teammates` `send_message` `broadcast` `request_shutdown` `request_plan` `review_plan` `create_worktree` | 多 agent 协作，Plan Gate 审批 |
+| 🌲 Worktree | `remove_worktree` | Git worktree 管理 |
+| 🔌 MCP | `connect_mcp` + 4 个动态工具 | Mock docs/deploy MCP 服务器 |
+| 🔄 Workflow | `workflow` | 6 原语编排引擎 |
+| 🎯 Goal | `/goal` CLI | 目标循环，自动评估 |
 
-## 🏗️ Architecture
+## 🏗️ 架构
 
 ```
-User Input
+用户输入
     │
     ▼
 ┌─────────────────────────────────────┐
-│           agent_loop (6 phases)     │
+│           agent_loop（6 阶段）       │
 │  1. UserPromptSubmit hook           │
-│  2. Drain events (cron/bg/team)     │
-│  3. Memory recall + system prompt   │
-│  4. Compactor + LLM call            │
+│  2. 事件排空（cron/bg/team）         │
+│  3. 记忆召回 + 系统提示词            │
+│  4. 压缩 + LLM 调用                 │
 │  5. Goal Stop hook                  │
-│  6. Tool dispatch (35+ tools)       │
+│  6. 工具 dispatch（35+ 工具）        │
 └──────────┬──────────────────────────┘
            │
     ┌──────┴──────┐
     ▼             ▼
 ┌────────┐  ┌────────────┐
-│ Hooks  │  │ Permission │
-│ (5)    │  │ (3 gates)  │
+│ Hooks  │  │ 权限系统    │
+│ (5)    │  │ (3 道闸)   │
 └────────┘  └────────────┘
            │
     ┌──────┴──────────────────────────┐
     ▼         ▼        ▼       ▼      ▼
 ┌───────┐ ┌──────┐ ┌─────┐ ┌─────┐ ┌──────┐
-│  Cron │ │  BG  │ │Team │ │ MCP │ │fcntl │
-│daemon │ │daemon│ │thrd │ │dyn  │ │locks │
+│  Cron │ │ 后台 │ │团队 │ │ MCP │ │ 文件 │
+│daemon │ │daemon│ │线程 │ │动态 │ │ 锁   │
 └───────┘ └──────┘ └─────┘ └─────┘ └──────┘
 ```
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
 ```bash
-# 1. Clone
+# 1. 克隆
 git clone https://github.com/feather011/harnessagent.git
 cd harnessagent
 
-# 2. Install dependencies
+# 2. 安装依赖
 pip install openai pyyaml python-dotenv
 
-# 3. Configure API key
+# 3. 配置 API Key
 cp .env.example .env
-# Edit .env and set MIMO_API_KEY
+# 编辑 .env，填入 MIMO_API_KEY
 
-# 4. Run
+# 4. 启动
 python -m harness
 ```
 
-## ⚙️ Configuration
+## ⚙️ 配置
 
-`.env` file:
+`.env` 文件：
 
 ```env
-MIMO_API_KEY=your-api-key-here
+MIMO_API_KEY=你的 API Key
 MIMO_BASE_URL=https://api.xiaomimimo.com/v1
 MIMO_MODEL=mimo-v2.5
 ```
 
-Works with any OpenAI-compatible API. For DeepSeek:
+兼容任何 OpenAI 协议 API。DeepSeek 配置：
 
 ```env
-MIMO_API_KEY=your-deepseek-key
+MIMO_API_KEY=你的 DeepSeek Key
 MIMO_BASE_URL=https://api.deepseek.com
 MIMO_MODEL=deepseek-chat
 ```
 
-## 🎮 Demo
+## 🎮 演示
 
-### Todo Task Management
+### 任务管理
 ```
 harness >> 用 todo_write 列出今天任务
-→ Model calls todo_write tool → renders task checklist
+→ 模型调用 todo_write → 渲染 [ ] / [>] / [x] 任务清单
 ```
 
-### Cron Scheduled Jobs
+### 定时任务
 ```
-harness >> schedule_cron '*/2 * * * *' 'check status'
-→ Registers cron job → fires [Scheduled] every 2 minutes
+harness >> schedule_cron '*/2 * * * *' '检查状态'
+→ 注册 cron job → 每 2 分钟触发 [Scheduled] 检查状态
 ```
 
-### Background Bash
+### 后台执行
 ```
 harness >> bash(command='sleep 3', run_in_background=true)
-→ Returns [Background task bg_0001 started]
-→ <task_notification> arrives after completion
+→ 返回 [Background task bg_0001 started]
+→ 完成后收到 <task_notification> 通知
 ```
 
-### Multi-Agent Team
+### 多 Agent 团队
 ```
 harness >> spawn_teammate alice
-→ Alice daemon thread starts
-harness >> send_message alice 'review code quality'
-→ Alice processes message, executes tools, returns results
+→ alice daemon 线程启动
+harness >> send_message alice '请检查代码质量'
+→ alice 处理消息，执行工具，返回结果
 ```
 
-### Goal Loop
+### Goal 目标循环
 ```
-harness >> /goal python -c 'print(1)' exits 0
-→ Goal set → agent works → evaluator checks each turn
-→ pass / block / defer until achieved or budget exhausted
+harness >> /goal python -c 'print(1)' 退出码 0
+→ 设置目标 → agent 工作 → 每轮评估 pass/block/defer
+→ 直到达成或预算耗尽
 ```
 
-### Workflow Orchestration
+### Workflow 编排
 ```
 harness >> workflow(name='review-changes', args={'target': 'staged'})
-→ Runs 5-dimension parallel audit + verify pipeline
-→ Returns structured findings as <task_notification>
+→ 5 维度并行审计 + 逐条验证 → 结构化结果
 ```
 
-## 🧪 Testing
+## 🧪 测试
 
 ```bash
-# Run all 155 tests
+# 运行全部 155 个测试
 python -m pytest tests/ -v
 
-# Run specific phase
+# 运行特定阶段
 python -m pytest tests/test_harness_phase1.py -v
 ```
 
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 harness/
-├── agent.py          # Core agent loop (6 phases)
-├── cli.py            # python -m harness entry point
+├── agent.py          # 核心 agent_loop（6 阶段）
+├── cli.py            # python -m harness 入口
 ├── config.py         # AgentConfig + load_config()
-├── llm.py            # LLMClient (OpenAI SDK wrapper)
-├── errors.py         # Exception hierarchy
-├── hooks/            # 5 built-in hooks
-├── permission/       # 3-gate permission system
-├── tools/            # 35+ tool implementations
-├── context/          # 4-step context compactor
-├── memory/           # 4-subsystem memory store
-├── background/       # Background bash manager
-├── teams/            # Multi-agent runtime + message bus
-├── workflow/         # Workflow engine (6 primitives)
-└── goal/             # Goal loop controller
+├── llm.py            # LLMClient（OpenAI SDK 封装）
+├── errors.py         # 异常层级
+├── hooks/            # 5 个内置 hook
+├── permission/       # 3 道闸权限系统
+├── tools/            # 35+ 工具实现
+├── context/          # 4 步上下文压缩器
+├── memory/           # 4 子系统记忆存储
+├── background/       # 后台 bash 管理器
+├── teams/            # 多 agent 运行时 + 消息总线
+├── workflow/         # Workflow 引擎（6 原语）
+└── goal/             # Goal 目标循环控制器
 ```
 
 ## 📄 License
 
 MIT
 
-## 🤝 Contributing
+## 🤝 贡献
 
-This package is a production rewrite of a 17-chapter teaching project. The `archive/teaching-history` branch preserves the full learning history (s01-s17, ~16,000 lines).
+欢迎贡献！`harness/README.md` 包含模块级文档。
 
-Contributions welcome! See `harness/README.md` for module-level documentation.
+教学历史（s01-s17，~16,000 行）保留在 `archive/teaching-history` 分支。
