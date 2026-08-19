@@ -152,7 +152,11 @@ def agent_loop(
                 def _model_dump(msg_content, msg_tc_list, **kw):
                     result = {"role": "assistant", "content": msg_content}
                     if msg_tc_list:
-                        result["tool_calls"] = [{"id": t.id} for t in msg_tc_list]
+                        result["tool_calls"] = [{
+                            "id": t.id,
+                            "type": "function",
+                            "function": {"name": t.function.name, "arguments": t.function.arguments},
+                        } for t in msg_tc_list]
                     return result
 
                 msg_obj = type("Msg", (), {
