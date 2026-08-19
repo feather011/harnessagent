@@ -12,10 +12,9 @@ class InputBox(TextArea):
         super().__init__(id="input")
 
     def on_key(self, event: Key):
-        if event.key == "enter" and not event.shift:
+        if event.key == "enter":
             text = self.text.strip()
             if text:
-                # 粘贴检测：> 50 字符 → 标记
                 line_count = text.count("\n") + 1
                 if line_count > 5 and len(text) > 200:
                     self.app.post_message(InputEvent(text=f"[pasted {line_count} lines]\n{text}"))
