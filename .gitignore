@@ -1,0 +1,28 @@
+# 环境
+.venv/
+.env
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+# Runtime artifacts (后面章节会用到，先备好)
+.memory/
+.tasks/
+.teams/
+.team/
+.mailboxes/
+.worktrees/
+.runtime/
+.scheduled_tasks.json
+.transcripts/
+.task_outputs/
+# 函数级测试临时目录（memory_path 要求在工作区内）
+.tmp_*/
+# 测试产物
+.pytest_cache/
+.tox/
+.coverage
+# IDE
+.vscode/
+.idea/
