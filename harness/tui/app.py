@@ -24,7 +24,7 @@ class MainScreen(Screen):
     def compose(self) -> ComposeResult:
         yield StatusBar(self.config)
         yield ChatView()
-        yield InputBox()
+        yield InputBox(workdir=self.config.workdir)
 
 
 class HarnessApp(App):

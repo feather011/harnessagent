@@ -133,6 +133,32 @@ class TestInputBox:
         box = InputBox()
         assert hasattr(box, "action_submit")
 
+    def test_command_menu_items(self):
+        from harness.tui.widgets.input_box import COMMANDS
+        assert len(COMMANDS) >= 5
+        cmds = [c[0] for c in COMMANDS]
+        assert "/help" in cmds
+        assert "/goal" in cmds
+        assert "/clear" in cmds
+
+    def test_file_completion(self):
+        from harness.tui.widgets.input_box import InputBox
+        box = InputBox(workdir=PROJECT_ROOT)
+        files = box._get_workspace_files(max_files=5)
+        assert isinstance(files, list)
+        assert len(files) > 0
+        assert any("harness" in f for f in files)
+
+    def test_completion_popup(self):
+        from harness.tui.widgets.input_box import CompletionPopup
+        popup = CompletionPopup(["/help", "/goal"], {"/help": "show help"})
+        assert popup.items == ["/help", "/goal"]
+        popup.move_down()
+        assert popup.selected_index == 1
+        popup.move_up()
+        assert popup.selected_index == 0
+        assert popup.get_selected() == "/help"
+
 
 # ============================================================ 8. LLM stream
 class TestLLMStream:

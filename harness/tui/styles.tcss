@@ -22,6 +22,25 @@ Screen { background: $surface; }
     border: solid $primary;
 }
 
+#completion-popup {
+    dock: bottom;
+    height: auto;
+    max-height: 12;
+    background: $surface;
+    border: solid $accent;
+    padding: 0 1;
+    z-index: 10;
+}
+
+.completion-option {
+    padding: 0 1;
+}
+
+.completion-option.selected {
+    background: $accent;
+    color: $text;
+}
+
 .logo {
     color: cyan;
     text-align: center;
