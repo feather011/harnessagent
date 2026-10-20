@@ -51,7 +51,8 @@ def bash(command: str, run_in_background: bool = False) -> str:
         out = "(no output)"
     if len(out) > 50000:
         out = out[:50000] + "\n... (output truncated)"
-    return out
+    # 保留退出码：宿主（Mini DeerFlow）需要区分「有输出」与「成功」
+    return f"[exit {r.returncode}] {out}"
 
 
 def read_file(path: str, limit: int | None = None) -> str:

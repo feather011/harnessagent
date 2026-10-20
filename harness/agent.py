@@ -211,6 +211,13 @@ def agent_loop(
         # ── 阶段 6：tool dispatch ──
         for call in msg.tool_calls:
             name = call.function.name
+            # PreToolDispatch：在 JSON 解析之前触发，负责计数（tool_calls 限制）
+            blocked = trigger_hooks("PreToolDispatch", name, call.function.arguments)
+            if blocked is not None:
+                messages.append({"role": "tool", "tool_call_id": call.id, "content": str(blocked)})
+                continue
+
+            # JSON 解析在 PreToolUse 之前，以便权限检查能拿到正确参数
             try:
                 args = json.loads(call.function.arguments)
             except json.JSONDecodeError as e:
@@ -218,10 +225,19 @@ def agent_loop(
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": output})
                 continue
 
-            # PreToolUse hook
+            # PreToolUse：在 JSON 解析之后触发，负责权限检查
             blocked = trigger_hooks("PreToolUse", name, args)
             if blocked is not None:
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": str(blocked)})
+                # 权限拒绝也必须走协议事件：宿主只能通过 JSONL 的
+                # tool_start / tool_done 看到工具调用。此前这里直接
+                # continue，拒绝结果只留在本进程的 messages 里，
+                # 宿主的 project_execute.verification 收不到拒绝原因，
+                # tool_calls 计数也与真实尝试次数不符。
+                if on_tool_start:
+                    on_tool_start(name, args, call.id)
+                if on_tool_done:
+                    on_tool_done(name, args, str(blocked), 0.0, call.id)
                 continue
 
             # Phase 3: bash run_in_background 拦截
