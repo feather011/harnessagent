@@ -1,4 +1,10 @@
-"""harness.config — AgentConfig dataclass + load_config()。"""
+"""harness.config — AgentConfig dataclass + load_config()。
+
+懒加载策略：不在模块导入时加载 .env，而是在首次调用 load_config() 时
+加载 HARNESS_ENV_FILE（由 HarnessRunner 在子进程启动前注入）。
+这样测试通过 HarnessRunner(..., env_file=...) 注入的测试控制 .env 能生效，
+不会受到上一次运行残留的 os.environ 状态影响。
+"""
 
 import os
 from dataclasses import dataclass, field
@@ -7,17 +13,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from harness.errors import HarnessError
-
-# 从 HARNESS_ENV_FILE 环境变量读取 .env 路径。
-# 由 HarnessRunner.run() 在 subprocess 启动前注入（harness_root/.env）。
-# 未设置时尝试从 harnessagent 根目录加载。
-_env_file = os.environ.get("HARNESS_ENV_FILE")
-if _env_file:
-    load_dotenv(_env_file, override=True)
-else:
-    _default = (Path(__file__).parent.parent / ".env").resolve()
-    if _default.exists():
-        load_dotenv(_default, override=True)
 
 
 @dataclass
@@ -44,8 +39,31 @@ class AgentConfig:
             self.tool_results_dir = self.workdir / ".task_outputs" / "tool-results"
 
 
+_loaded: bool = False
+
+
+def _ensure_env_loaded() -> None:
+    """懒加载 .env：只在首次调用 load_config() 前执行一次。
+
+    用 override=False：进程环境里已显式设置的变量优先于 .env 文件，
+    避免部署环境的配置被仓库里的 .env 静默覆盖。
+    """
+    global _loaded
+    if _loaded:
+        return
+    _loaded = True
+    env_file = os.environ.get("HARNESS_ENV_FILE")
+    if env_file and Path(env_file).exists():
+        load_dotenv(env_file, override=False)
+    else:
+        default = (Path(__file__).parent.parent / ".env").resolve()
+        if default.exists():
+            load_dotenv(default, override=False)
+
+
 def load_config() -> AgentConfig:
     """从环境变量加载配置。优先 MiniMax，其次 MiMo。缺少 api_key 时抛出 HarnessError。"""
+    _ensure_env_loaded()
     api_key = os.getenv("MINIMAX_API_KEY", "")
     # MiniMax 有两个端点：Anthropic 兼容（/anthropic）和 OpenAI 兼容（/v1）。
     # harness 使用 OpenAI SDK，必须用 /v1 端点。
