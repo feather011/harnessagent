@@ -89,12 +89,17 @@ def register_compact_handler(compact_fn: Callable) -> None:
 
 
 def execute_tool(handlers: dict, name: str, args: dict) -> str:
-    """执行工具，双 catch：未知工具 → Error；handler 异常 → Error 字符串。"""
+    """执行工具，双 catch：未知工具 → Error；handler 异常 → Error 字符串。
+
+    返回的字符串若本身就是 ``str`` 子类（如 ``tools.base.ToolOutput``），
+    原样返回以保留附加属性（例如 bash 的 ``exit_code``），不做强制 str()。
+    """
     handler = handlers.get(name)
     if handler is None:
         return f"Error: unknown tool '{name}'"
     try:
-        return str(handler(**args))
+        result = handler(**args)
+        return result if isinstance(result, str) else str(result)
     except Exception as error:
         return f"Error: {type(error).__name__}: {error}"
 

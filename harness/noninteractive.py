@@ -174,6 +174,9 @@ def main() -> None:
 
     def on_tool_done(name: str, tool_args: dict, output, duration_s, call_id) -> None:
         completed_calls["n"] += 1
+        # 结构化退出码：只认工具对象上携带的字段（bash 的 r.returncode），
+        # 不从 output 文本里猜。取不到就不发该字段。
+        exit_code = getattr(output, "exit_code", None)
         text, truncated = _truncate(str(output), TOOL_OUTPUT_EVENT_CHARS)
         payload = {
             "type": "tool_done",
@@ -184,6 +187,8 @@ def main() -> None:
             "output_truncated": truncated,
             "duration_s": round(duration_s, 3),
         }
+        if isinstance(exit_code, int) and not isinstance(exit_code, bool):
+            payload["exit_code"] = exit_code
         # 对于 bash，发送命令预览（500 字符截断）+ 截断标记
         if name == "bash" and isinstance(tool_args, dict):
             cmd = str(tool_args.get("command", ""))

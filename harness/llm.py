@@ -60,6 +60,9 @@ class FakeLLMClient:
         self._call_count = 0
         # 测试用：注入延迟来触发超时（环境变量秒）
         self._delay = float(os.getenv("HARNESS_FAKE_LLM_DELAY", "0"))
+        # 测试用：第一次工具调用改成指定的 bash 命令（离线验证
+        # tool_done.exit_code 的结构化链路，不需要真实模型）
+        self._bash_command = os.getenv("HARNESS_FAKE_LLM_BASH")
 
     @property
     def model(self) -> str:
@@ -73,6 +76,13 @@ class FakeLLMClient:
             time.sleep(self._delay)
         # 统计已有 tool 消息
         tool_msgs = [m for m in messages if m.get("role") == "tool"]
+        if not tool_msgs and self._bash_command:
+            # 离线验证用：第一次就执行指定命令（真实 bash 工具 → tool_done.exit_code）
+            args = json.dumps({"command": self._bash_command}, ensure_ascii=False)
+            tc = [{"id": f"call_{uuid.uuid4().hex[:8]}",
+                   "type": "function",
+                   "function": {"name": "bash", "arguments": args}}]
+            return _make_fake_resp("assistant", tool_calls=tc)
         if not tool_msgs:
             # 第一次：返回 write_file 工具调用
             args = json.dumps({"path": "hello.c", "content": _HELLO_C_CONTENT},

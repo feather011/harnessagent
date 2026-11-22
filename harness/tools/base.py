@@ -11,6 +11,22 @@ _BASH = shutil.which("bash")
 _WORKDIR: Path = Path.cwd()
 
 
+class ToolOutput(str):
+    """工具输出：保持字符串行为，同时携带结构化的进程退出码。
+
+    宿主（Mini DeerFlow）需要的是**被测命令自己的退出码**，而不是从输出
+    文本里解析出来的值。``exit_code`` 只由真正执行进程的工具（bash）设置；
+    其它工具不设置（取不到就是 None）。
+    """
+
+    exit_code: int | None
+
+    def __new__(cls, text: str, exit_code: int | None = None):
+        obj = super().__new__(cls, text)
+        obj.exit_code = exit_code
+        return obj
+
+
 def set_workdir(path: Path):
     global _WORKDIR
     _WORKDIR = path.resolve()
@@ -32,7 +48,7 @@ def safe_path(p: str) -> Path:
 def bash(command: str, run_in_background: bool = False) -> str:
     """执行 shell 命令。Phase 1 不支持 run_in_background。"""
     if run_in_background:
-        return "Background not yet implemented in Phase 1"
+        return ToolOutput("Background not yet implemented in Phase 1")
     try:
         if _BASH:
             r = subprocess.run(
@@ -45,14 +61,15 @@ def bash(command: str, run_in_background: bool = False) -> str:
                 capture_output=True, text=True, errors="replace", timeout=30,
             )
     except subprocess.TimeoutExpired:
-        return "Error: command timed out (30s)"
+        return ToolOutput("Error: command timed out (30s)")
     out = (r.stdout + r.stderr).strip()
     if not out:
         out = "(no output)"
     if len(out) > 50000:
         out = out[:50000] + "\n... (output truncated)"
-    # 保留退出码：宿主（Mini DeerFlow）需要区分「有输出」与「成功」
-    return f"[exit {r.returncode}] {out}"
+    # 保留退出码：宿主（Mini DeerFlow）需要区分「有输出」与「成功」。
+    # 同时把 r.returncode 原样放进结构化字段（tool_done.exit_code）。
+    return ToolOutput(f"[exit {r.returncode}] {out}", exit_code=r.returncode)
 
 
 def read_file(path: str, limit: int | None = None) -> str:
